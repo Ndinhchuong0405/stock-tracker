@@ -21,6 +21,11 @@
       <!-- Left: Stock info and chart -->
       <div class="stock-display">
         <div id="stock-info" class="stock-info"></div>
+        <div id="loading-indicator" class="loading-indicator hidden">
+          <div class="spinner"></div>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+        <div id="price-alert" class="price-alert hidden"></div>
         <button id="add-favorite-btn" onclick="addToFavorites()" class="hidden">+ Thêm vào yêu thích</button>
         <canvas id="stockChart" class="hidden"></canvas>
       </div>

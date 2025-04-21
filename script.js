@@ -4,11 +4,23 @@ let currentSymbol = ""; // Lưu tạm mã đang xem để thêm yêu thích
 
 async function getStockPrice() {
   const symbol = document.getElementById("symbol-input").value.trim().toUpperCase() || "MSFT";
-  currentSymbol = symbol; // lưu lại để dùng cho nút "Thêm vào yêu thích"
+  currentSymbol = symbol;
+  
+  // Hiển thị loading
+  const loadingIndicator = document.getElementById("loading-indicator");
   const stockInfo = document.getElementById("stock-info");
   const addFavBtn = document.getElementById("add-favorite-btn");
+  const priceAlert = document.getElementById("price-alert");
+  
+  // Ẩn kết quả cũ và hiện loading
+  stockInfo.innerHTML = "";
+  loadingIndicator.classList.remove("hidden");
+  priceAlert.classList.add("hidden");
+  document.getElementById("stockChart").style.display = "none";
+  addFavBtn.style.display = "none";
 
   try {
+    // Code gọi API như cũ
     const priceUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
     const historyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${apiKey}`;
     const overviewUrl = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${apiKey}`;
@@ -41,6 +53,27 @@ async function getStockPrice() {
       <p><strong>Thay đổi:</strong> ${quote["09. change"]} USD</p>
       <p><strong>Tỷ lệ thay đổi:</strong> ${quote["10. change percent"]}</p>
     `;
+
+    // Hiển thị cảnh báo tăng/giảm giá
+    const priceAlert = document.getElementById("price-alert");
+    const changePercent = parseFloat(quote["10. change percent"]);
+
+    if (!isNaN(changePercent)) {
+      priceAlert.classList.remove("hidden", "up", "down");
+      if (changePercent > 0) {
+        priceAlert.classList.add("up");
+        priceAlert.textContent = `🔔 Cổ phiếu ${symbol} đang tăng giá (+${changePercent}%)`;
+      } else if (changePercent < 0) {
+        priceAlert.classList.add("down");
+        priceAlert.textContent = `🔔 Cổ phiếu ${symbol} đang giảm giá (${changePercent}%)`;
+      } else {
+        priceAlert.classList.add("up");
+        priceAlert.textContent = `🔔 Cổ phiếu ${symbol} không đổi.`;
+      }
+    } else {
+      priceAlert.classList.add("hidden");
+    }
+
 
     // Hiển thị nút "Thêm vào yêu thích"
     addFavBtn.style.display = "inline-block";
@@ -75,12 +108,19 @@ async function getStockPrice() {
     });
 
     document.getElementById("stockChart").style.display = "block";
-
+    loadingIndicator.classList.add("hidden");
   } catch (error) {
+    // Xử lý lỗi
     stockInfo.innerHTML = `<p>Đã xảy ra lỗi khi kết nối API.</p>`;
     console.error("Lỗi kết nối:", error);
-    document.getElementById("add-favorite-btn").style.display = "none";
+    
+    // Cũng cần ẩn loading khi gặp lỗi
+    loadingIndicator.classList.add("hidden");
+    addFavBtn.style.display = "none";
   }
+  setTimeout(() => {
+    document.getElementById("loading-indicator").classList.add("hidden");
+  }, 5000);
 }
 
 // Xử lý thêm vào danh sách yêu thích khi người dùng bấm nút
@@ -89,24 +129,88 @@ function addToFavorites() {
   if (!symbol) return;
 
   const favoriteList = document.getElementById("favorite-list");
-  const existing = Array.from(favoriteList.children).some(li => li.dataset.symbol === symbol);
-  if (!existing) {
-    const li = document.createElement("li");
-    li.dataset.symbol = symbol;
+  
+  // Tìm phần tử nếu đã tồn tại
+  const existingLi = Array.from(favoriteList.children).find(li => li.dataset.symbol === symbol);
+  
+  // Nếu đã tồn tại thì xóa
+  if (existingLi) {
+    existingLi.remove();
+  }
 
-    const span = document.createElement("span");
-    span.textContent = symbol;
-    span.className = "favorite-symbol";
-    span.onclick = () => getStockPriceFromFavorite(symbol);
+  // Tiếp tục tạo phần tử mới như code cũ
+  const li = document.createElement("li");
+  li.dataset.symbol = symbol;
 
-    const removeBtn = document.createElement("button");
-    removeBtn.textContent = "❌";
-    removeBtn.className = "remove-btn";
-    removeBtn.onclick = () => li.remove();
+  const span = document.createElement("span");
+  span.textContent = symbol;
+  span.className = "favorite-symbol";
+  span.onclick = () => getStockPriceFromFavorite(symbol);
 
-    li.appendChild(span);
-    li.appendChild(removeBtn);
-    favoriteList.appendChild(li);
+  const removeBtn = document.createElement("button");
+  removeBtn.textContent = "X";
+  removeBtn.className = "remove-btn";
+  removeBtn.onclick = () => {
+    li.remove();
+    // Xóa ghi chú khỏi localStorage khi xóa mã
+    localStorage.removeItem(`note_${symbol}`);
+    saveFavorites(); // Sẽ thêm hàm này ở bước tiếp theo
+  };
+
+  const noteInput = document.createElement("input");
+  noteInput.type = "text";
+  noteInput.placeholder = "Ghi chú...";
+  noteInput.className = "stock-note";
+  noteInput.addEventListener("input", () => {
+    localStorage.setItem(`note_${symbol}`, noteInput.value);
+  });
+  
+  // Lấy ghi chú từ localStorage nếu có
+  noteInput.value = localStorage.getItem(`note_${symbol}`) || "";
+
+  li.appendChild(span);
+  li.appendChild(removeBtn);
+  li.appendChild(noteInput);
+  favoriteList.appendChild(li);
+  
+  // Lưu danh sách yêu thích sau khi thêm
+  saveFavorites();
+}
+
+// Lưu danh sách yêu thích vào localStorage
+function saveFavorites() {
+  const favoriteList = document.getElementById("favorite-list");
+  const favorites = Array.from(favoriteList.children).map(li => {
+    return {
+      symbol: li.dataset.symbol,
+      note: li.querySelector('.stock-note').value
+    };
+  });
+  
+  localStorage.setItem('favorites', JSON.stringify(favorites));
+}
+
+// Tải danh sách yêu thích từ localStorage
+function loadFavorites() {
+  const favoritesJson = localStorage.getItem('favorites');
+  if (!favoritesJson) return;
+  
+  try {
+    const favorites = JSON.parse(favoritesJson);
+    favorites.forEach(fav => {
+      // Lưu symbol hiện tại tạm thời
+      currentSymbol = fav.symbol;
+      
+      // Thêm vào danh sách (sử dụng hàm đã có)
+      addToFavorites();
+      
+      // Cập nhật ghi chú (nếu có)
+      if (fav.note) {
+        localStorage.setItem(`note_${fav.symbol}`, fav.note);
+      }
+    });
+  } catch (e) {
+    console.error("Lỗi khi tải danh sách yêu thích:", e);
   }
 }
 
@@ -115,3 +219,11 @@ function getStockPriceFromFavorite(symbol) {
   document.getElementById("symbol-input").value = symbol;
   getStockPrice();
 }
+
+window.onload = function () {
+  // Tải danh sách yêu thích trước
+  loadFavorites();
+  
+  // Tải thông tin cổ phiếu mặc định
+  getStockPrice('MSFT');
+};
