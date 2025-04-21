@@ -1,9 +1,12 @@
-const apiKey = "YOUR_API_KEY"; // <-- Thay bằng API key thật của bạn
-let stockChart = null; // Khởi tạo biến biểu đồ ngoài hàm
+const apiKey = "demo";
+let stockChart = null;
+let currentSymbol = ""; // Lưu tạm mã đang xem để thêm yêu thích
 
 async function getStockPrice() {
   const symbol = document.getElementById("symbol-input").value.trim().toUpperCase() || "MSFT";
+  currentSymbol = symbol; // lưu lại để dùng cho nút "Thêm vào yêu thích"
   const stockInfo = document.getElementById("stock-info");
+  const addFavBtn = document.getElementById("add-favorite-btn");
 
   try {
     const priceUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
@@ -27,6 +30,7 @@ async function getStockPrice() {
     if (!quote || !timeSeries) {
       stockInfo.innerHTML = `<p>Không lấy được dữ liệu, thử lại với mã khác.</p>`;
       document.getElementById("stockChart").style.display = "none";
+      addFavBtn.style.display = "none";
       return;
     }
 
@@ -37,6 +41,9 @@ async function getStockPrice() {
       <p><strong>Thay đổi:</strong> ${quote["09. change"]} USD</p>
       <p><strong>Tỷ lệ thay đổi:</strong> ${quote["10. change percent"]}</p>
     `;
+
+    // Hiển thị nút "Thêm vào yêu thích"
+    addFavBtn.style.display = "inline-block";
 
     const dates = Object.keys(timeSeries).slice(0, 30).reverse();
     const prices = dates.map(date => parseFloat(timeSeries[date]["4. close"]));
@@ -72,5 +79,39 @@ async function getStockPrice() {
   } catch (error) {
     stockInfo.innerHTML = `<p>Đã xảy ra lỗi khi kết nối API.</p>`;
     console.error("Lỗi kết nối:", error);
+    document.getElementById("add-favorite-btn").style.display = "none";
   }
+}
+
+// Xử lý thêm vào danh sách yêu thích khi người dùng bấm nút
+function addToFavorites() {
+  const symbol = currentSymbol;
+  if (!symbol) return;
+
+  const favoriteList = document.getElementById("favorite-list");
+  const existing = Array.from(favoriteList.children).some(li => li.dataset.symbol === symbol);
+  if (!existing) {
+    const li = document.createElement("li");
+    li.dataset.symbol = symbol;
+
+    const span = document.createElement("span");
+    span.textContent = symbol;
+    span.className = "favorite-symbol";
+    span.onclick = () => getStockPriceFromFavorite(symbol);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "❌";
+    removeBtn.className = "remove-btn";
+    removeBtn.onclick = () => li.remove();
+
+    li.appendChild(span);
+    li.appendChild(removeBtn);
+    favoriteList.appendChild(li);
+  }
+}
+
+// Cho phép tra cứu lại khi click vào mã yêu thích
+function getStockPriceFromFavorite(symbol) {
+  document.getElementById("symbol-input").value = symbol;
+  getStockPrice();
 }

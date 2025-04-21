@@ -2,22 +2,37 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stock Tracker</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ứng dụng theo dõi chứng khoán</title>
+  <link rel="stylesheet" href="style.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1>Stock Tracker</h1>
+    <h1>Ứng dụng theo dõi chứng khoán</h1>
 
-    <input type="text" id="symbol-input" placeholder="Nhập mã cổ phiếu (ví dụ: AAPL)" />
-    <button onclick="getStockPrice()">Xem giá</button>
+    <div class="search-bar input-group">
+      <input type="text" id="symbol-input" placeholder="Nhập mã cổ phiếu (VD: AAPL)" />
+      <button onclick="getStockPrice()">Lấy thông tin</button>
+    </div>
 
-    <div id="stock-info"></div>
-    <canvas id="stockChart" width="400" height="200"></canvas>
+    <!-- Main content area split into two columns -->
+    <div class="main-content">
+      <!-- Left: Stock info and chart -->
+      <div class="stock-display">
+        <div id="stock-info" class="stock-info"></div>
+        <button id="add-favorite-btn" onclick="addToFavorites()" class="hidden">+ Thêm vào yêu thích</button>
+        <canvas id="stockChart" class="hidden"></canvas>
+      </div>
+
+      <!-- Right: Favorites sidebar -->
+      <div class="favorites-section">
+        <h3>Danh sách yêu thích</h3>
+        <ul id="favorite-list"></ul>
+      </div>
+    </div>
   </div>
 
-  <script src="script.js" type="text/javascript"></script>
+  <script src="script.js"></script>
 </body>
 </html>
