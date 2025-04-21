@@ -42,3 +42,13 @@ button:hover {
 #stock-info {
   margin-top: 20px;
 }
+
+canvas {
+  max-width: 100%;
+  margin-top: 20px;
+}
+
+#stockChart {
+  display: none;
+  margin-top: 20px;
+}

@@ -1,36 +1,76 @@
-const apiKey = "d01udh9r01qt2u30skogd01udh9r01qt2u30skp0"; // API key của bạn từ Finnhub
+const apiKey = "YOUR_API_KEY"; // <-- Thay bằng API key thật của bạn
+let stockChart = null; // Khởi tạo biến biểu đồ ngoài hàm
 
 async function getStockPrice() {
-  const symbol = document.getElementById("symbol-input").value.trim().toUpperCase() || "AAPL";
+  const symbol = document.getElementById("symbol-input").value.trim().toUpperCase() || "MSFT";
   const stockInfo = document.getElementById("stock-info");
 
   try {
-    // Lấy giá hiện tại
-    const quoteUrl = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`;
-    const profileUrl = `https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${apiKey}`;
+    const priceUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
+    const historyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${apiKey}`;
+    const overviewUrl = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${apiKey}`;
 
-    const [quoteRes, profileRes] = await Promise.all([
-      fetch(quoteUrl),
-      fetch(profileUrl)
+    const [priceRes, historyRes, overviewRes] = await Promise.all([
+      fetch(priceUrl),
+      fetch(historyUrl),
+      fetch(overviewUrl)
     ]);
 
-    const quoteData = await quoteRes.json();
-    const profileData = await profileRes.json();
+    const priceData = await priceRes.json();
+    const historyData = await historyRes.json();
+    const overviewData = await overviewRes.json();
 
-    if (!quoteData.c || quoteData.c === 0) {
+    const quote = priceData["Global Quote"];
+    const timeSeries = historyData["Time Series (Daily)"];
+    const companyName = overviewData.Name;
+
+    if (!quote || !timeSeries) {
       stockInfo.innerHTML = `<p>Không lấy được dữ liệu, thử lại với mã khác.</p>`;
+      document.getElementById("stockChart").style.display = "none";
       return;
     }
 
     stockInfo.innerHTML = `
       <h2>${symbol}</h2>
-      <p><strong>Tên công ty:</strong> ${profileData.name || "Không rõ"}</p>
-      <p><strong>Giá hiện tại:</strong> $${quoteData.c.toFixed(2)}</p>
-      <p><strong>Thay đổi:</strong> ${quoteData.d >= 0 ? "+" : ""}${quoteData.d.toFixed(2)} USD</p>
-      <p><strong>Tỷ lệ thay đổi:</strong> ${quoteData.dp.toFixed(2)}%</p>
+      <p><strong>Tên công ty:</strong> ${companyName || "Không rõ"}</p>
+      <p><strong>Giá hiện tại:</strong> $${parseFloat(quote["05. price"]).toFixed(2)}</p>
+      <p><strong>Thay đổi:</strong> ${quote["09. change"]} USD</p>
+      <p><strong>Tỷ lệ thay đổi:</strong> ${quote["10. change percent"]}</p>
     `;
+
+    const dates = Object.keys(timeSeries).slice(0, 30).reverse();
+    const prices = dates.map(date => parseFloat(timeSeries[date]["4. close"]));
+
+    const ctx = document.getElementById("stockChart").getContext("2d");
+    if (stockChart && typeof stockChart.destroy === "function") {
+      stockChart.destroy();
+    }
+
+    stockChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: dates,
+        datasets: [{
+          label: "Giá đóng cửa (30 ngày)",
+          data: prices,
+          borderColor: "blue",
+          fill: false,
+          tension: 0.2
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: { title: { display: true, text: "Ngày" } },
+          y: { title: { display: true, text: "Giá ($)" } }
+        }
+      }
+    });
+
+    document.getElementById("stockChart").style.display = "block";
+
   } catch (error) {
     stockInfo.innerHTML = `<p>Đã xảy ra lỗi khi kết nối API.</p>`;
-    console.error("Lỗi khi gọi Finnhub API:", error);
+    console.error("Lỗi kết nối:", error);
   }
 }
