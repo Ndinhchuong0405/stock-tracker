@@ -46,8 +46,30 @@
           </div>
         </div>
 
+        <div class="ai-assistant-section hidden" id="ai-assistant-section">
+          <h3>🤖 Trợ lý AI phân tích</h3>
+          <div class="ai-chat-container">
+            <div class="ai-chat-messages" id="ai-chat-messages">
+              <div class="ai-message">
+                Xin chào! Tôi là trợ lý AI phân tích cổ phiếu. Bạn có thể hỏi tôi các câu hỏi về cổ phiếu đang xem như:
+                <ul>
+                  <li>Đánh giá xu hướng của cổ phiếu này?</li>
+                  <li>Nên đầu tư vào cổ phiếu này không?</li>
+                  <li>Phân tích kỹ thuật cơ bản?</li>
+                  <li>Dự đoán ngắn hạn cho cổ phiếu này?</li>
+                </ul>
+              </div>
+            </div>
+            <div class="ai-chat-input">
+              <input type="text" id="ai-question-input" placeholder="Nhập câu hỏi của bạn..." />
+              <button id="ai-ask-btn">Hỏi</button>
+            </div>
+          </div>
+        </div>
+
         <button id="add-favorite-btn" onclick="addToFavorites()" class="hidden">+ Thêm vào yêu thích</button>
         <button id="toggle-alert-btn" class="hidden">⚠️ Cài đặt cảnh báo</button>
+        <button id="toggle-ai-assistant-btn" class="hidden">🤖 Trợ lý AI</button>
         <canvas id="stockChart" class="hidden"></canvas>
       </div>
 

@@ -331,15 +331,22 @@ function getStockPriceFromFavorite(symbol) {
   getStockPrice();
 }
 
-window.onload = function () {
+window.onload = function() {
+  // Đăng ký sự kiện cho các nút
   document.getElementById("toggle-alert-btn").addEventListener("click", toggleAlertSettings);
   document.getElementById("save-alert-btn").addEventListener("click", saveAlertSettings);
-  // Tải danh sách yêu thích trước
+  document.getElementById("toggle-ai-assistant-btn").classList.add("hidden");
+  
+  // Khởi tạo trợ lý AI
+  initializeAIAssistant();
+  
+  // Tải danh sách yêu thích
   loadFavorites();
   
   // Tải thông tin cổ phiếu mặc định
   getStockPrice('MSFT');
 
+  // Thiết lập chức năng chuyển đổi chủ đề
   const themeToggleBtn = document.getElementById("theme-toggle-btn");
   
   // Kiểm tra nếu người dùng đã chọn chế độ tối trước đó
@@ -452,4 +459,211 @@ function removeFromFavorites(element, symbol) {
     // Lưu lại danh sách yêu thích
     saveFavorites();
   }
+}
+
+// Thêm JavaScript để xử lý trợ lý AI
+function initializeAIAssistant() {
+  const toggleAIBtn = document.getElementById("toggle-ai-assistant-btn");
+  const aiSection = document.getElementById("ai-assistant-section");
+  const askButton = document.getElementById("ai-ask-btn");
+  const questionInput = document.getElementById("ai-question-input");
+  const chatMessages = document.getElementById("ai-chat-messages");
+
+  // Hiển thị nút kích hoạt trợ lý AI khi có dữ liệu cổ phiếu
+  function showAIButton() {
+    toggleAIBtn.classList.remove("hidden");
+  }
+
+  // Ẩn/hiện khu vực trợ lý AI
+  toggleAIBtn.addEventListener("click", function() {
+    aiSection.classList.toggle("hidden");
+  });
+
+  // Xử lý khi người dùng hỏi
+  askButton.addEventListener("click", handleUserQuestion);
+  questionInput.addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+      handleUserQuestion();
+    }
+  });
+
+function handleUserQuestion() {
+  const question = questionInput.value.trim();
+  if (!question) return;
+
+  // Hiển thị câu hỏi của người dùng
+  const userMessageDiv = document.createElement("div");
+  userMessageDiv.className = "ai-message user";
+  userMessageDiv.textContent = question;
+  chatMessages.appendChild(userMessageDiv);
+
+  // Hiển thị trạng thái đang nhập
+  const typingDiv = document.createElement("div");
+  typingDiv.className = "ai-message";
+  typingDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+  chatMessages.appendChild(typingDiv);
+  
+  // Cuộn xuống cuối cuộc trò chuyện
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  // Xóa input
+  questionInput.value = "";
+
+  // Lấy dữ liệu cổ phiếu hiện tại
+  const stockInfo = getStockData();
+  
+  // Sau một khoảng thời gian, hiển thị phản hồi của AI
+  setTimeout(() => {
+    chatMessages.removeChild(typingDiv);
+    const aiMessageDiv = document.createElement("div");
+    aiMessageDiv.className = "ai-message";
+    aiMessageDiv.innerHTML = generateAIResponse(question, stockInfo);
+    chatMessages.appendChild(aiMessageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, 1500);
+}
+
+// Lấy dữ liệu cổ phiếu hiện tại
+function getStockData() {
+  const stockInfoElement = document.getElementById("stock-info");
+  const stockInfo = {};
+
+  try {
+    // Lấy symbol
+    const symbolText = stockInfoElement.querySelector("h2")?.textContent || "";
+    stockInfo.symbol = symbolText;
+
+    // Lấy tên công ty
+    const companyNameElement = stockInfoElement.querySelector("p:nth-child(2)")?.textContent || "";
+    stockInfo.companyName = companyNameElement.replace("Tên công ty:", "").trim();
+
+    // Lấy giá hiện tại
+    const priceElement = stockInfoElement.querySelector("p:nth-child(3)")?.textContent || "";
+    const priceMatch = priceElement.match(/\$([0-9.]+)/);
+    stockInfo.price = priceMatch ? parseFloat(priceMatch[1]) : 0;
+
+    // Lấy thay đổi
+    const changeElement = stockInfoElement.querySelector("p:nth-child(4)")?.textContent || "";
+    const changeMatch = changeElement.match(/([+-]?[0-9.]+)/);
+    stockInfo.change = changeMatch ? parseFloat(changeMatch[0]) : 0;
+
+    // Lấy phần trăm thay đổi
+    const percentageElement = stockInfoElement.querySelector("p:nth-child(5)")?.textContent || "";
+    const percentageMatch = percentageElement.match(/([+-]?[0-9.]+)/);
+    stockInfo.changePercent = percentageMatch ? parseFloat(percentageMatch[0]) : 0;
+
+    // Lấy dữ liệu từ chart nếu có
+    if (window.stockChart && window.stockChart.data) {
+      stockInfo.chartData = {
+        dates: [...window.stockChart.data.labels],
+        prices: [...window.stockChart.data.datasets[0].data]
+      };
+    }
+  } catch (error) {
+    console.error("Lỗi khi lấy dữ liệu cổ phiếu:", error);
+  }
+
+  return stockInfo;
+}
+
+// Tạo phản hồi từ AI dựa trên câu hỏi và dữ liệu cổ phiếu
+function generateAIResponse(question, stockInfo) {
+  question = question.toLowerCase();
+  
+  // Nếu không có dữ liệu cổ phiếu
+  if (!stockInfo.symbol) {
+    return "Vui lòng tìm kiếm một cổ phiếu trước khi hỏi về nó.";
+  }
+
+  // Phân tích xu hướng đơn giản từ dữ liệu biểu đồ
+  let trend = "không xác định";
+  let recommendation = "không có khuyến nghị cụ thể";
+  let technicalAnalysis = "";
+
+  if (stockInfo.chartData && stockInfo.chartData.prices.length > 5) {
+    const prices = stockInfo.chartData.prices;
+    const recentPrices = prices.slice(-5);
+    
+    // Phân tích xu hướng đơn giản
+    let upDays = 0;
+    for (let i = 1; i < recentPrices.length; i++) {
+      if (recentPrices[i] > recentPrices[i-1]) upDays++;
+    }
+    
+    if (upDays >= 3) {
+      trend = "tăng";
+      recommendation = "có thể xem xét mua vào nếu phù hợp với chiến lược đầu tư của bạn";
+    } else if (upDays <= 1) {
+      trend = "giảm";
+      recommendation = "nên thận trọng và theo dõi thêm";
+    } else {
+      trend = "đi ngang";
+      recommendation = "nên chờ tín hiệu rõ ràng hơn";
+    }
+    
+    // Phân tích kỹ thuật đơn giản
+    const lastPrice = prices[prices.length - 1];
+    const ma5 = calculateMA(prices, 5);
+    const ma10 = calculateMA(prices, 10);
+    
+    technicalAnalysis = `<br>- Giá hiện tại: $${lastPrice.toFixed(2)}<br>- MA5: $${ma5.toFixed(2)}<br>- MA10: $${ma10.toFixed(2)}`;
+    
+    if (lastPrice > ma5 && ma5 > ma10) {
+      technicalAnalysis += "<br>- Chỉ báo: Xu hướng tăng trong ngắn hạn, giá trên đường trung bình động";
+    } else if (lastPrice < ma5 && ma5 < ma10) {
+      technicalAnalysis += "<br>- Chỉ báo: Xu hướng giảm trong ngắn hạn, giá dưới đường trung bình động";
+    } else {
+      technicalAnalysis += "<br>- Chỉ báo: Xu hướng chưa rõ ràng";
+    }
+  }
+
+  // Các câu trả lời dựa trên loại câu hỏi
+  if (question.includes("xu hướng") || question.includes("trend")) {
+    return `Dựa trên dữ liệu gần đây, cổ phiếu ${stockInfo.symbol} (${stockInfo.companyName}) có xu hướng <strong>${trend}</strong>. Giá hiện tại là $${stockInfo.price}, với mức thay đổi ${stockInfo.change} (${stockInfo.changePercent}%).${technicalAnalysis}`;
+  }
+  else if (question.includes("nên đầu tư") || question.includes("nên mua") || question.includes("có nên mua")) {
+    return `Dựa trên phân tích kỹ thuật đơn giản, <strong>${recommendation}</strong> đối với cổ phiếu ${stockInfo.symbol}. Lưu ý đây chỉ là phân tích sơ bộ, bạn nên tham khảo thêm các nguồn thông tin khác và phân tích cơ bản về công ty trước khi đưa ra quyết định đầu tư.${technicalAnalysis}`;
+  }
+  else if (question.includes("phân tích kỹ thuật") || question.includes("technical")) {
+    return `Phân tích kỹ thuật cơ bản cho ${stockInfo.symbol}:${technicalAnalysis || "<br>Chưa có đủ dữ liệu để phân tích kỹ thuật."}`;
+  }
+  else if (question.includes("dự đoán") || question.includes("ngắn hạn")) {
+    let prediction = "";
+    
+    if (trend === "tăng") {
+      prediction = "tích cực";
+    } else if (trend === "giảm") {
+      prediction = "tiêu cực";
+    } else {
+      prediction = "chưa có tín hiệu rõ ràng";
+    }
+    
+    return `Dự đoán ngắn hạn cho ${stockInfo.symbol} là <strong>${prediction}</strong>. Lưu ý rằng dự đoán này chỉ dựa trên phân tích kỹ thuật đơn giản và thị trường chứng khoán luôn tiềm ẩn rủi ro.${technicalAnalysis}`;
+  }
+  else {
+    return `Tôi có thể giúp bạn phân tích cổ phiếu ${stockInfo.symbol} (${stockInfo.companyName}). Giá hiện tại là $${stockInfo.price}. Bạn có thể hỏi tôi về xu hướng, khuyến nghị đầu tư, phân tích kỹ thuật hoặc dự đoán ngắn hạn.`;
+  }
+}
+
+// Tính toán đường trung bình động
+function calculateMA(prices, period) {
+  if (prices.length < period) return 0;
+  
+  const recentPrices = prices.slice(-period);
+  const sum = recentPrices.reduce((total, price) => total + price, 0);
+  return sum / period;
+}
+
+// Sửa đổi hàm getStockPrice để hiển thị nút AI khi có dữ liệu
+const originalGetStockPrice = window.getStockPrice;
+window.getStockPrice = function(...args) {
+  const result = originalGetStockPrice.apply(this, args);
+  
+  // Sau khi lấy dữ liệu xong, hiển thị nút AI
+  setTimeout(() => {
+    showAIButton();
+  }, 800);
+    
+    return result;
+  };
 }
