@@ -2,8 +2,9 @@ const apiKey = "demo";
 let stockChart = null;
 let currentSymbol = ""; // Lưu tạm mã đang xem để thêm yêu thích
 
-async function getStockPrice() {
-  const symbol = document.getElementById("symbol-input").value.trim().toUpperCase() || "MSFT";
+async function getStockPrice(customSymbol, isRefresh) {
+  // Nếu là refresh thì sử dụng symbol hiện tại, nếu không thì lấy từ input
+  const symbol = isRefresh ? currentSymbol : (customSymbol || document.getElementById("symbol-input").value.trim().toUpperCase() || "MSFT");
   currentSymbol = symbol;
   
   // Hiển thị loading
@@ -226,4 +227,26 @@ window.onload = function () {
   
   // Tải thông tin cổ phiếu mặc định
   getStockPrice('MSFT');
+
+  const themeToggleBtn = document.getElementById("theme-toggle-btn");
+  
+  // Kiểm tra nếu người dùng đã chọn chế độ tối trước đó
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark-theme");
+    themeToggleBtn.textContent = "☀️ Chế độ sáng";
+  }
+  
+  themeToggleBtn.addEventListener("click", function() {
+    // Chuyển đổi chế độ
+    document.body.classList.toggle("dark-theme");
+    
+    // Lưu tùy chọn
+    if (document.body.classList.contains("dark-theme")) {
+      localStorage.setItem("theme", "dark");
+      themeToggleBtn.textContent = "☀️ Chế độ sáng";
+    } else {
+      localStorage.setItem("theme", "light");
+      themeToggleBtn.textContent = "🌙 Chế độ tối";
+    }
+  });
 };

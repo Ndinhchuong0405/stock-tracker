@@ -14,6 +14,11 @@
     <div class="search-bar input-group">
       <input type="text" id="symbol-input" placeholder="Nhập mã cổ phiếu (VD: AAPL)" />
       <button onclick="getStockPrice()">Lấy thông tin</button>
+      <button onclick="getStockPrice(null, true)" class="refresh-btn">🔄 Làm mới</button>
+    </div>
+
+    <div class="theme-toggle">
+      <button id="theme-toggle-btn">🌙 Chế độ tối</button>
     </div>
 
     <!-- Main content area split into two columns -->
