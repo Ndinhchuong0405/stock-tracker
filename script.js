@@ -246,6 +246,17 @@ function addToFavorites() {
     <div class="favorite-item">
       <div class="favorite-header">
         <span class="favorite-symbol" onclick="getStockPriceFromFavorite('${symbol}')">${symbol}</span>
+        <select class="category-select" onchange="updateCategory('${symbol}', this.value)">
+          <option value="">-- Chọn danh mục --</option>
+          <option value="Cổ phiếu lớn">Cổ phiếu lớn</option>
+          <option value="Cổ phiếu vừa">Cổ phiếu vừa</option>
+          <option value="Cổ phiếu nhỏ">Cổ phiếu nhỏ</option>
+          <option value="Công nghệ">Công nghệ</option>
+          <option value="Tài chính">Tài chính</option>
+          <option value="Y tế">Y tế</option>
+          <option value="Tiêu dùng">Tiêu dùng</option>
+          <option value="Khác">Khác</option>
+        </select>
         <button class="remove-btn" onclick="removeFromFavorites(this, '${symbol}')">X</button>
       </div>
       <div class="portfolio-inputs">
@@ -319,7 +330,19 @@ function loadFavorites() {
       
       // Thêm vào danh sách (sử dụng hàm đã có)
       addToFavorites();
+
+      // Khôi phục danh mục nếu có
+      const category = localStorage.getItem(`category_${fav.symbol}`);
+      if (category) {
+        const li = document.querySelector(`li[data-symbol="${fav.symbol}"]`);
+        const categorySelect = li.querySelector(".category-select");
+        if (categorySelect) {
+          categorySelect.value = category;
+        }
+      }
     });
+    // Cập nhật bộ lọc danh mục
+    updateCategoryFilter();
   } catch (e) {
     console.error("Lỗi khi tải danh sách yêu thích:", e);
   }
@@ -345,6 +368,9 @@ window.onload = function() {
   
   // Tải thông tin cổ phiếu mặc định
   getStockPrice('MSFT');
+
+  // Khởi tạo bộ lọc danh mục
+  updateCategoryFilter();
 
   // Thiết lập chức năng chuyển đổi chủ đề
   const themeToggleBtn = document.getElementById("theme-toggle-btn");
@@ -666,4 +692,70 @@ window.getStockPrice = function(...args) {
     
     return result;
   };
+}
+
+// Cập nhật danh mục cho cổ phiếu
+function updateCategory(symbol, category) {
+  localStorage.setItem(`category_${symbol}`, category);
+  updateCategoryFilter();
+}
+
+// Cập nhật danh sách danh mục trong bộ lọc
+function updateCategoryFilter() {
+  // Lấy tất cả danh mục đã sử dụng
+  const categories = new Set();
+  categories.add("all"); // Mặc định luôn có "Tất cả"
+  
+  // Quét localStorage để tìm tất cả các danh mục
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key.startsWith("category_")) {
+      const category = localStorage.getItem(key);
+      if (category) {
+        categories.add(category);
+      }
+    }
+  }
+  
+  // Cập nhật dropdown lọc
+  const categoryFilter = document.getElementById("category-filter");
+  const currentSelection = categoryFilter.value;
+  
+  // Xóa tất cả options hiện tại ngoại trừ "Tất cả"
+  while (categoryFilter.options.length > 1) {
+    categoryFilter.remove(1);
+  }
+  
+  // Thêm các danh mục mới
+  categories.forEach(category => {
+    if (category !== "all") {
+      const option = document.createElement("option");
+      option.value = category;
+      option.textContent = category;
+      categoryFilter.appendChild(option);
+    }
+  });
+  
+  // Khôi phục lựa chọn trước đó nếu vẫn còn
+  if (Array.from(categories).includes(currentSelection)) {
+    categoryFilter.value = currentSelection;
+  }
+}
+
+// Lọc danh sách theo danh mục
+function filterByCategory() {
+  const category = document.getElementById("category-filter").value;
+  const favoriteList = document.getElementById("favorite-list");
+  const items = favoriteList.querySelectorAll("li");
+  
+  items.forEach(item => {
+    const symbol = item.dataset.symbol;
+    const itemCategory = localStorage.getItem(`category_${symbol}`);
+    
+    if (category === "all" || category === itemCategory) {
+      item.style.display = "";
+    } else {
+      item.style.display = "none";
+    }
+  });
 }

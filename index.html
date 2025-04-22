@@ -76,6 +76,14 @@
       <!-- Right: Favorites sidebar -->
       <div class="favorites-section">
         <h3>Danh sách yêu thích</h3>
+        <div class="categories-management">
+          <div class="category-selector">
+            <label for="category-filter">Hiển thị danh mục:</label>
+            <select id="category-filter" onchange="filterByCategory()">
+              <option value="all">Tất cả</option>
+            </select>
+          </div>
+        </div>
         <ul id="favorite-list"></ul>
       </div>
     </div>
