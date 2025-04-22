@@ -315,3 +315,81 @@ body.dark-theme .price-alert.down {
   background-color: #391313;
   color: #f27c7c;
 }
+
+/* CSS cho phần cảnh báo giá */
+.alert-settings {
+  background-color: #fff3cd;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+body.dark-theme .alert-settings {
+  background-color: #332b00;
+  color: #f8e8a0;
+}
+
+.alert-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.alert-inputs > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alert-inputs label {
+  min-width: 180px;
+}
+
+.alert-inputs input {
+  flex: 1;
+}
+
+#save-alert-btn {
+  margin-top: 10px;
+  background-color: #ffc107;
+  color: #212529;
+}
+
+#save-alert-btn:hover {
+  background-color: #e0a800;
+}
+
+#toggle-alert-btn {
+  margin-left: 10px;
+  background-color: #ffc107;
+  color: #212529;
+}
+
+body.dark-theme #toggle-alert-btn,
+body.dark-theme #save-alert-btn {
+  background-color: #856404;
+  color: #fff3cd;
+}
+
+.price-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #dc3545;
+  color: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  z-index: 1000;
+  animation: fadeInOut 5s forwards;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; }
+}

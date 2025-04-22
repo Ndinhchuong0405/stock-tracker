@@ -55,6 +55,13 @@ async function getStockPrice(customSymbol, isRefresh) {
       <p><strong>Tỷ lệ thay đổi:</strong> ${quote["10. change percent"]}</p>
     `;
 
+    // Kiểm tra cảnh báo giá
+    const currentPrice = parseFloat(quote["05. price"]);
+    checkPriceAlerts(symbol, currentPrice);
+
+    // Hiển thị nút cài đặt cảnh báo
+    document.getElementById("toggle-alert-btn").style.display = "inline-block";
+
     // Hiển thị cảnh báo tăng/giảm giá
     const priceAlert = document.getElementById("price-alert");
     const changePercent = parseFloat(quote["10. change percent"]);
@@ -121,6 +128,76 @@ async function getStockPrice(customSymbol, isRefresh) {
   }
   setTimeout(() => {
     document.getElementById("loading-indicator").classList.add("hidden");
+  }, 5000);
+}
+
+// Xử lý hiển thị/ẩn phần cài đặt cảnh báo
+function toggleAlertSettings() {
+  const alertSettings = document.getElementById("alert-settings");
+  alertSettings.classList.toggle("hidden");
+  
+  // Hiển thị giá trị cảnh báo đã lưu (nếu có)
+  const symbol = currentSymbol;
+  if (symbol) {
+    const alertData = JSON.parse(localStorage.getItem(`alert_${symbol}`) || "{}");
+    document.getElementById("alert-upper").value = alertData.upper || "";
+    document.getElementById("alert-lower").value = alertData.lower || "";
+  }
+}
+
+// Lưu cài đặt cảnh báo
+function saveAlertSettings() {
+  const symbol = currentSymbol;
+  if (!symbol) return;
+  
+  const upperLimit = document.getElementById("alert-upper").value;
+  const lowerLimit = document.getElementById("alert-lower").value;
+  
+  // Lưu vào localStorage
+  localStorage.setItem(`alert_${symbol}`, JSON.stringify({
+    upper: upperLimit || null,
+    lower: lowerLimit || null
+  }));
+  
+  // Thông báo
+  alert(`Đã lưu cảnh báo cho ${symbol}`);
+  
+  // Ẩn phần cài đặt
+  document.getElementById("alert-settings").classList.add("hidden");
+}
+
+// Kiểm tra và hiển thị cảnh báo nếu giá vượt ngưỡng
+function checkPriceAlerts(symbol, currentPrice) {
+  if (!symbol || !currentPrice) return;
+  
+  const alertData = JSON.parse(localStorage.getItem(`alert_${symbol}`) || "{}");
+  const upperLimit = parseFloat(alertData.upper);
+  const lowerLimit = parseFloat(alertData.lower);
+  
+  // Kiểm tra ngưỡng trên
+  if (!isNaN(upperLimit) && currentPrice > upperLimit) {
+    showPriceNotification(`🔔 ${symbol} đã vượt ngưỡng ${upperLimit}! Giá hiện tại: ${currentPrice}`);
+  }
+  
+  // Kiểm tra ngưỡng dưới
+  if (!isNaN(lowerLimit) && currentPrice < lowerLimit) {
+    showPriceNotification(`🔔 ${symbol} đã xuống dưới ngưỡng ${lowerLimit}! Giá hiện tại: ${currentPrice}`);
+  }
+}
+
+// Hiển thị thông báo giá
+function showPriceNotification(message) {
+  // Tạo phần tử thông báo
+  const notification = document.createElement("div");
+  notification.className = "price-notification";
+  notification.textContent = message;
+  
+  // Thêm vào body
+  document.body.appendChild(notification);
+  
+  // Xóa sau 5 giây
+  setTimeout(() => {
+    notification.remove();
   }, 5000);
 }
 
@@ -222,6 +299,8 @@ function getStockPriceFromFavorite(symbol) {
 }
 
 window.onload = function () {
+  document.getElementById("toggle-alert-btn").addEventListener("click", toggleAlertSettings);
+  document.getElementById("save-alert-btn").addEventListener("click", saveAlertSettings);
   // Tải danh sách yêu thích trước
   loadFavorites();
   

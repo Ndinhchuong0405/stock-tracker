@@ -31,7 +31,23 @@
           <p>Đang tải dữ liệu...</p>
         </div>
         <div id="price-alert" class="price-alert hidden"></div>
+        <div id="alert-settings" class="alert-settings hidden">
+          <h4>Cài đặt cảnh báo giá</h4>
+          <div class="alert-inputs">
+            <div>
+              <label for="alert-upper">Cảnh báo khi giá vượt:</label>
+              <input type="number" id="alert-upper" step="0.01" placeholder="Nhập giá cao">
+            </div>
+            <div>
+              <label for="alert-lower">Cảnh báo khi giá dưới:</label>
+              <input type="number" id="alert-lower" step="0.01" placeholder="Nhập giá thấp">
+            </div>
+            <button id="save-alert-btn">Lưu cảnh báo</button>
+          </div>
+        </div>
+
         <button id="add-favorite-btn" onclick="addToFavorites()" class="hidden">+ Thêm vào yêu thích</button>
+        <button id="toggle-alert-btn" class="hidden">⚠️ Cài đặt cảnh báo</button>
         <canvas id="stockChart" class="hidden"></canvas>
       </div>
 
