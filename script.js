@@ -115,6 +115,23 @@ async function getStockPrice(customSymbol, isRefresh) {
       }
     });
 
+    // Cập nhật thông tin danh mục đầu tư nếu có
+    const favoriteList = document.getElementById("favorite-list");
+    const portfolioItem = Array.from(favoriteList.children).find(li => li.dataset.symbol === symbol);
+    if (portfolioItem) {
+      const sharesInput = portfolioItem.querySelector(".shares-input");
+      const buyPriceInput = portfolioItem.querySelector(".buy-price-input");
+      
+      if (sharesInput && buyPriceInput) {
+        const shares = parseFloat(sharesInput.value);
+        const buyPrice = parseFloat(buyPriceInput.value);
+        
+        if (shares && buyPrice) {
+          updatePortfolioDisplay(portfolioItem, parseFloat(quote["05. price"]), shares, buyPrice);
+        }
+      }
+    }
+
     document.getElementById("stockChart").style.display = "block";
     loadingIndicator.classList.add("hidden");
   } catch (error) {
@@ -201,7 +218,7 @@ function showPriceNotification(message) {
   }, 5000);
 }
 
-// Xử lý thêm vào danh sách yêu thích khi người dùng bấm nút
+// Thay đổi hàm addToFavorites() để thêm thông tin đầu tư
 function addToFavorites() {
   const symbol = currentSymbol;
   if (!symbol) return;
@@ -216,42 +233,63 @@ function addToFavorites() {
     existingLi.remove();
   }
 
-  // Tiếp tục tạo phần tử mới như code cũ
+  // Lấy thông tin cổ phiếu đang xem
+  const stockInfo = document.getElementById("stock-info");
+  const currentPrice = stockInfo.querySelector("p:nth-child(3)")?.textContent || "";
+  const priceMatch = currentPrice.match(/\$([0-9.]+)/);
+  const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
+
+  // Tạo phần tử mới
   const li = document.createElement("li");
   li.dataset.symbol = symbol;
-
-  const span = document.createElement("span");
-  span.textContent = symbol;
-  span.className = "favorite-symbol";
-  span.onclick = () => getStockPriceFromFavorite(symbol);
-
-  const removeBtn = document.createElement("button");
-  removeBtn.textContent = "X";
-  removeBtn.className = "remove-btn";
-  removeBtn.onclick = () => {
-    li.remove();
-    // Xóa ghi chú khỏi localStorage khi xóa mã
-    localStorage.removeItem(`note_${symbol}`);
-    saveFavorites(); // Sẽ thêm hàm này ở bước tiếp theo
-  };
-
-  const noteInput = document.createElement("input");
-  noteInput.type = "text";
-  noteInput.placeholder = "Ghi chú...";
-  noteInput.className = "stock-note";
-  noteInput.addEventListener("input", () => {
-    localStorage.setItem(`note_${symbol}`, noteInput.value);
-  });
+  li.innerHTML = `
+    <div class="favorite-item">
+      <div class="favorite-header">
+        <span class="favorite-symbol" onclick="getStockPriceFromFavorite('${symbol}')">${symbol}</span>
+        <button class="remove-btn" onclick="removeFromFavorites(this, '${symbol}')">X</button>
+      </div>
+      <div class="portfolio-inputs">
+        <input type="number" class="shares-input" placeholder="Số lượng" min="0" step="1" 
+              onchange="updatePortfolioValue('${symbol}', this)">
+        <input type="number" class="buy-price-input" placeholder="Giá mua" min="0" step="0.01"
+              onchange="updatePortfolioValue('${symbol}', this)">
+      </div>
+      <div class="portfolio-value">
+        <div class="value-display">
+          <span>Giá trị: </span><span class="current-value">$0.00</span>
+        </div>
+        <div class="pl-display">
+          <span>P/L: </span><span class="profit-loss">$0.00 (0%)</span>
+        </div>
+      </div>
+      <input type="text" class="stock-note" placeholder="Ghi chú..." 
+            oninput="localStorage.setItem('note_${symbol}', this.value);">
+    </div>
+  `;
   
-  // Lấy ghi chú từ localStorage nếu có
-  noteInput.value = localStorage.getItem(`note_${symbol}`) || "";
-
-  li.appendChild(span);
-  li.appendChild(removeBtn);
-  li.appendChild(noteInput);
   favoriteList.appendChild(li);
   
-  // Lưu danh sách yêu thích sau khi thêm
+  // Khôi phục dữ liệu đã lưu
+  const portfolioData = JSON.parse(localStorage.getItem(`portfolio_${symbol}`) || "{}");
+  if (portfolioData.shares) {
+    li.querySelector(".shares-input").value = portfolioData.shares;
+  }
+  if (portfolioData.buyPrice) {
+    li.querySelector(".buy-price-input").value = portfolioData.buyPrice;
+  }
+  
+  // Khôi phục ghi chú
+  const note = localStorage.getItem(`note_${symbol}`);
+  if (note) {
+    li.querySelector(".stock-note").value = note;
+  }
+  
+  // Cập nhật giá trị nếu có dữ liệu
+  if (price && portfolioData.shares && portfolioData.buyPrice) {
+    updatePortfolioDisplay(li, price, portfolioData.shares, portfolioData.buyPrice);
+  }
+  
+  // Lưu danh sách yêu thích
   saveFavorites();
 }
 
@@ -281,11 +319,6 @@ function loadFavorites() {
       
       // Thêm vào danh sách (sử dụng hàm đã có)
       addToFavorites();
-      
-      // Cập nhật ghi chú (nếu có)
-      if (fav.note) {
-        localStorage.setItem(`note_${fav.symbol}`, fav.note);
-      }
     });
   } catch (e) {
     console.error("Lỗi khi tải danh sách yêu thích:", e);
@@ -329,3 +362,94 @@ window.onload = function () {
     }
   });
 };
+
+// Lưu thông tin đầu tư (số lượng và giá mua)
+function updatePortfolioValue(symbol, inputElement) {
+  const li = inputElement.closest("li");
+  const sharesInput = li.querySelector(".shares-input");
+  const buyPriceInput = li.querySelector(".buy-price-input");
+  
+  const shares = parseFloat(sharesInput.value);
+  const buyPrice = parseFloat(buyPriceInput.value);
+  
+  // Lưu vào localStorage
+  localStorage.setItem(`portfolio_${symbol}`, JSON.stringify({
+    shares: shares || 0,
+    buyPrice: buyPrice || 0
+  }));
+  
+  // Lấy giá hiện tại từ API để cập nhật giá trị
+  fetchCurrentPrice(symbol, price => {
+    if (price) {
+      updatePortfolioDisplay(li, price, shares, buyPrice);
+    }
+  });
+}
+
+// Hàm lấy giá hiện tại
+async function fetchCurrentPrice(symbol, callback) {
+  try {
+    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    const quote = data["Global Quote"];
+    if (quote && quote["05. price"]) {
+      const price = parseFloat(quote["05. price"]);
+      callback(price);
+    } else {
+      callback(0);
+    }
+  } catch (error) {
+    console.error("Lỗi khi lấy giá hiện tại:", error);
+    callback(0);
+  }
+}
+
+// Cập nhật hiển thị giá trị danh mục
+function updatePortfolioDisplay(li, currentPrice, shares, buyPrice) {
+  if (!shares || !buyPrice || !currentPrice) return;
+  
+  const currentValue = shares * currentPrice;
+  const initialValue = shares * buyPrice;
+  const profitLoss = currentValue - initialValue;
+  const profitLossPercent = (profitLoss / initialValue) * 100;
+  
+  const currentValueEl = li.querySelector(".current-value");
+  const profitLossEl = li.querySelector(".profit-loss");
+  
+  currentValueEl.textContent = `$${currentValue.toFixed(2)}`;
+  
+  profitLossEl.textContent = `$${profitLoss.toFixed(2)} (${profitLossPercent.toFixed(2)}%)`;
+  profitLossEl.className = "profit-loss";
+  
+  if (profitLoss > 0) {
+    profitLossEl.classList.add("profit");
+  } else if (profitLoss < 0) {
+    profitLossEl.classList.add("loss");
+  }
+}
+
+function removeFromFavorites(element, symbol) {
+  // Ngăn sự kiện lan ra
+  event.stopPropagation();
+  
+  const confirmDelete = confirm(`Bạn có muốn xóa cổ phiếu ${symbol} khỏi danh sách yêu thích không?`);
+  
+  if (confirmDelete) {
+    const keepData = confirm(`Bạn có muốn giữ lại dữ liệu (số lượng, giá mua, ghi chú) của cổ phiếu ${symbol} không?`);
+    
+    // Xóa phần tử HTML
+    element.parentNode.parentNode.parentNode.remove();
+    
+    if (!keepData) {
+      // Xóa tất cả dữ liệu liên quan
+      localStorage.removeItem(`portfolio_${symbol}`);
+      localStorage.removeItem(`note_${symbol}`);
+      localStorage.removeItem(`alert_${symbol}`);
+    }
+    
+    // Lưu lại danh sách yêu thích
+    saveFavorites();
+  }
+}
